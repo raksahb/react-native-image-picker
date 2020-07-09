@@ -573,12 +573,16 @@ public class ImagePickerModule extends ReactContextBaseJavaModule
                                    final int requestCode)
   {
     boolean permissionsGranted = true;
-    boolean needsWritePermission = requestCode == REQUEST_PERMISSIONS_FOR_LIBRARY || PermissionUtils.needsExternalStoragePermission(options);
+    boolean needsWritePermission = PermissionUtils.needsExternalStoragePermission(options);
 
     String[] PERMISSIONS;
     switch (requestCode) {
       case REQUEST_PERMISSIONS_FOR_LIBRARY:
-        PERMISSIONS = new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE};
+        if (needsWritePermission) {
+          PERMISSIONS = new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE};
+        } else {
+          PERMISSIONS = new String[]{Manifest.permission.READ_EXTERNAL_STORAGE};
+        }
         break;
       case REQUEST_PERMISSIONS_FOR_CAMERA:
         if (needsWritePermission) {
@@ -602,7 +606,15 @@ public class ImagePickerModule extends ReactContextBaseJavaModule
 
     if (!permissionsGranted)
     {
-      final boolean dontAskAgain = ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE) && ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.CAMERA);
+      boolean dontAskAgain = true;
+          
+      // check if any of the permissions need to be requested
+      for (String permission : PERMISSIONS) {
+        if (!ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)) {
+          dontAskAgain = false;
+          break;
+        }
+      }
 
       if (dontAskAgain)
       {
